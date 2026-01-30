@@ -1,7 +1,7 @@
 {
   "name": "Arrived Fleteros",
   "short_name": "Arrived",
-  "start_url": "./index.html",
+  "start_url": "./fletero/index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#bfe6e2",
@@ -17,5 +17,7 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "orientation": "portrait",
+  "description": "Reporte de llegadas de fleteros + panel con mapa."
 }

@@ -7,6 +7,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./shared/ui.css" />
   <title>Arrived · Fleteros</title>
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
 </head>
 <body>
   <div class="wrap" style="max-width:980px">
@@ -53,5 +54,11 @@
       </div>
     </div>
   </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    }
+  </script>
 </body>
 </html>

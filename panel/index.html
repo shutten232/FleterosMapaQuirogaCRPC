@@ -21,6 +21,7 @@
     #map{ height: 520px; border-radius:18px; border:1px solid var(--line); overflow:hidden; }
     @media (max-width: 920px){ #map{ height: 360px; } }
   </style>
+  <link rel="apple-touch-icon" href="../icons/icon-192.png">
 </head>
 <body>
   <div class="wrap">
@@ -28,6 +29,7 @@
       <div class="brand"><div class="t">Arrived</div><div class="s">Panel</div></div>
       <div class="navActions">
         <a class="pill" href="../fletero/index.html"><span class="dot"></span><span>Ir a Fletero</span></a>
+        <button class="pill" id="btnAdmin" type="button" style="cursor:pointer"><span class="dot"></span><span>Admin</span></button>
         <div class="pill"><span class="dot" id="connDot"></span><span id="connTxt">Conexión: --</span></div>
       </div>
     </div>
@@ -61,13 +63,30 @@
         <div class="tableWrap">
           <table>
             <thead>
-              <tr><th>Último reporte</th><th>Fletero</th><th>Ubicación</th><th>Precisión</th></tr>
+              <tr><th>Último reporte</th><th>Fletero</th><th>Ubicación</th><th>Precisión</th><th>Acciones</th></tr>
             </thead>
             <tbody id="tbody"></tbody>
           </table>
         </div>
       </div>
     </div>
+  </div>
+
+
+  <div class="card" id="adminCard" style="display:none">
+    <div class="hTitle" style="font-size:16px">Modo Admin</div>
+    <div class="small">PIN local (no es seguridad real). Para seguridad real: usar UID admin en reglas.</div>
+
+    <label>PIN</label>
+    <input id="adminPin" placeholder="PIN" inputmode="numeric" />
+
+    <div class="row" style="justify-content:flex-start">
+      <button id="adminUnlock" class="btn btnPrimary btnSmall" type="button">Desbloquear</button>
+      <button id="adminLock" class="btn btnGhost btnSmall" type="button">Bloquear</button>
+      <button id="adminClose" class="btn btnGhost btnSmall" type="button">Cerrar</button>
+    </div>
+
+    <div class="small" id="adminHint" style="margin-top:8px">—</div>
   </div>
 
   <script>
@@ -77,6 +96,40 @@
     const el=(id)=>document.getElementById(id);
     const connDot=el('connDot'), connTxt=el('connTxt');
     const q=el('q'), btnClear=el('btnClear'), tbody=el('tbody'), hint=el('hint');
+    const btnAdmin = el('btnAdmin');
+    const adminCard = el('adminCard');
+    const adminPin = el('adminPin');
+    const adminUnlock = el('adminUnlock');
+    const adminLock = el('adminLock');
+    const adminClose = el('adminClose');
+    const adminHint = el('adminHint');
+
+    const LS_ADMIN = 'arrived_admin_unlocked';
+    const ADMIN_PIN = '2468'; // Cambiar por tu PIN
+    let isAdmin = (localStorage.getItem(LS_ADMIN)==='1');
+
+    function paintAdmin(){
+      adminHint.textContent = isAdmin ? 'Admin: desbloqueado' : 'Admin: bloqueado';
+    }
+    function openAdmin(){ adminCard.style.display='block'; paintAdmin(); adminPin.value=''; adminPin.focus(); }
+    function closeAdmin(){ adminCard.style.display='none'; }
+    function lockAdmin(){ isAdmin=false; localStorage.setItem(LS_ADMIN,'0'); paintAdmin(); applyFilter(); }
+    function unlockAdmin(){
+      if(String(adminPin.value||'').trim() !== ADMIN_PIN){
+        adminHint.textContent = 'PIN incorrecto.';
+        return;
+      }
+      isAdmin=true;
+      localStorage.setItem(LS_ADMIN,'1');
+      paintAdmin();
+      applyFilter();
+    }
+
+    btnAdmin.addEventListener('click', openAdmin);
+    adminClose.addEventListener('click', closeAdmin);
+    adminLock.addEventListener('click', lockAdmin);
+    adminUnlock.addEventListener('click', unlockAdmin);
+
 
     function setConn(ok,msg){
       connDot.style.background = ok ? 'rgba(23,178,106,.9)' : 'rgba(255,90,90,.9)';
@@ -157,8 +210,18 @@
         tr.innerHTML = `<td>${fmt(r.ts)}</td>
           <td><b>${r.fleteroId||''}</b><div class="small">${r.deviceId||''}</div></td>
           <td>${link?`<a href="${link}" target="_blank" rel="noopener">Abrir</a>`:'<span class="small">—</span>'}</td>
-          <td>${r.accuracy?Math.round(r.accuracy)+' m':'—'}</td>`;
+          <td>${r.accuracy?Math.round(r.accuracy)+' m':'—'}</td>
+          <td>${isAdmin?`<button type="button" class="btn btnGhost btnSmall" data-del="${r.fleteroId||''}" style="width:auto">Eliminar</button>`:`<span class="small">—</span>`}</td>`;
         tbody.appendChild(tr);
+        const btn = tr.querySelector('[data-del]');
+        if(btn){ btn.addEventListener('click', async ()=>{
+          const name = btn.getAttribute('data-del');
+          if(!name) return;
+          if(!confirm('Eliminar marca y logs recientes de: '+name+' ?')) return;
+          try{ await deleteLiveAndLogs(name); }
+          catch{ alert('No se pudo eliminar. Revisá reglas RTDB.'); }
+        }); }
+
       });
       hint.textContent = rows.length ? `Fleteros visibles: ${rows.length}.` : 'Sin datos. Esperando reportes...';
     }
@@ -184,6 +247,24 @@
         firebase.initializeApp(cfg);
         await firebase.auth().signInAnonymously();
         const db=firebase.database();
+
+        async function deleteLiveAndLogs(fleteroName){
+          if(!isAdmin){ openAdmin(); return; }
+          // 1) delete live marker
+          await db.ref('live').child(fleteroName).remove();
+
+          // 2) delete recent logs for this fletero (best-effort)
+          try{
+            const snap = await db.ref('arrivals').orderByChild('fleteroId').equalTo(fleteroName).limitToLast(500).get();
+            const val = snap.val() || {};
+            const updates = {};
+            Object.keys(val).forEach(k => { updates['arrivals/'+k] = null; });
+            if(Object.keys(updates).length){
+              await db.ref().update(updates);
+            }
+          }catch{}
+        }
+
         db.ref('live').on('value', (snap)=>{
           const val=snap.val()||{};
           const arr=Object.values(val);
@@ -199,6 +280,12 @@
         hint.textContent='Revisá firebase-config.js, Auth anónimo y dominio autorizado.';
       }
     })();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('../sw.js').catch(()=>{});
+    }
   </script>
 </body>
 </html>
