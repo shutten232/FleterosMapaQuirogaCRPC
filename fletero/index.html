@@ -48,7 +48,7 @@
           <small id="who">Fletero: —</small>
         </div>
 
-        <button class="btn btnPrimary" id="btnLlegue">LLEGUÉ</button>
+        <button class="btn btnPrimary" id="btnLlegue" type="button">LLEGUÉ</button>
 
         <div class="status" id="status">
           <div>ℹ️</div>
@@ -60,7 +60,7 @@
 
         <div class="row">
           <span class="badge">Pendientes: <b id="qCount" style="color:var(--ink)">0</b></span>
-          <button id="btnSetup" class="btn btnGhost btnSmall">Seleccionar fletero</button>
+          <button id="btnSetup" class="btn btnGhost btnSmall" type="button">Seleccionar fletero</button>
         </div>
       </div>
     </div>
@@ -72,15 +72,15 @@
       <label>Fletero</label>
       <select id="fleteroId">
         <option value="">Seleccionar…</option>
-        <option value="Joaquin">Joaquin</option>
-        <option value="Rodrigo">Rodrigo</option>
-        <option value="Jorge">Jorge</option>
-        <option value="Agustin">Agustin</option>
+        <option value="joaquin">Joaquin</option>
+        <option value="rodrigo">Rodrigo</option>
+        <option value="jorge">Jorge</option>
+        <option value="agustin">Agustin</option>
       </select>
 
       <div class="row" style="justify-content:flex-start">
-        <button id="btnSave" class="btn btnPrimary btnSmall">Guardar</button>
-        <button id="btnCancel" class="btn btnGhost btnSmall">Cerrar</button>
+        <button id="btnSave" class="btn btnPrimary btnSmall" type="button">Guardar</button>
+        <button id="btnCancel" class="btn btnGhost btnSmall" type="button">Cerrar</button>
       </div>
     </div>
   </div>
@@ -89,7 +89,8 @@
     const { uuid, clamp } = window.ArrivedUtils;
     const { getConfig } = window.ArrivedFirebase;
 
-    const ALLOWED = new Set(['Joaquin','Rodrigo','Jorge','Agustin']);
+    const FLETEROS = { joaquin:'Joaquin', rodrigo:'Rodrigo', jorge:'Jorge', agustin:'Agustin' };
+    const ALLOWED = new Set(Object.keys(FLETEROS));
 
     const LS = { fleteroId:'arrived_fleteroId', deviceId:'arrived_deviceId', queue:'arrived_queue' };
     const el=(id)=>document.getElementById(id);
@@ -105,8 +106,8 @@
     }
     function getDeviceId(){ let id=localStorage.getItem(LS.deviceId); if(!id){id=uuid();localStorage.setItem(LS.deviceId,id);} return id; }
     function getFleteroId(){ return clamp(localStorage.getItem(LS.fleteroId)||'',60); }
-    function setFleteroId(v){ localStorage.setItem(LS.fleteroId, v); paintWho(); }
-    function paintWho(){ const f=getFleteroId(); who.textContent='Fletero: '+(f||'—'); }
+    function setFleteroId(v){ localStorage.setItem(LS.fleteroId, String(v||'').toLowerCase().trim()); paintWho(); }
+    function paintWho(){ const f=getFleteroId(); who.textContent='Fletero: '+(FLETEROS[f]||'—'); }
 
     function getQueue(){ try{return JSON.parse(localStorage.getItem(LS.queue)||'[]');}catch{return [];} }
     function setQueue(q){ localStorage.setItem(LS.queue, JSON.stringify(q)); qCount.textContent=q.length; }
@@ -156,8 +157,11 @@
     btnSetup.addEventListener('click', openSetup);
     btnCancel.addEventListener('click', closeSetup);
     btnSave.addEventListener('click', ()=>{
-      const v=(fleteroSel.value||'').trim();
-      if(!ALLOWED.has(v)){ setStatus('err','Fletero','Seleccioná un fletero válido.'); return; }
+      const v = String(fleteroSel.value||'').toLowerCase().trim();
+      if(!ALLOWED.has(v)){
+        setStatus('err','Fletero','Seleccioná un fletero válido.');
+        return;
+      }
       setFleteroId(v);
       closeSetup();
       setStatus('ok','Listo','Fletero configurado.');
@@ -166,7 +170,7 @@
     btnLlegue.addEventListener('click', async ()=>{
       try{
         const f=getFleteroId();
-        if(!ALLOWED.has(f)){ openSetup(); setStatus('err','Fletero','Seleccioná un fletero válido.'); return; }
+        if(!ALLOWED.has(String(f||'').toLowerCase().trim())){ openSetup(); setStatus('err','Fletero','Seleccioná un fletero válido.'); return; }
 
         btnLlegue.disabled=true;
         setStatus('info','Enviando','Obteniendo GPS…');
@@ -179,7 +183,7 @@
         }
 
         const payload = {
-          fleteroId:f,
+          fleteroId:(FLETEROS[f]||f),
           deviceId:getDeviceId(),
           uid:user?.uid||null,
           ts: firebase.database.ServerValue.TIMESTAMP,
@@ -208,7 +212,7 @@
       updateNet(); paintWho(); setQueue(getQueue());
       try{ await initFirebase(); setStatus('ok','Conectado','Listo para registrar llegadas.'); await flushQueue(); }
       catch(e){ setStatus('err','Firebase','Revisá Auth anónimo + dominio autorizado + firebase-config.js.'); }
-      if(!ALLOWED.has(getFleteroId())) openSetup();
+      if(!ALLOWED.has(String(getFleteroId()||'').toLowerCase().trim())) openSetup();
     })();
   </script>
 </body>
