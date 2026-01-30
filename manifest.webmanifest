@@ -1,6 +1,6 @@
 {
-  "name": "Arrived Fleteros",
-  "short_name": "Arrived",
+  "name": "Fleteros",
+  "short_name": "Fleteros",
   "start_url": "./fletero/",
   "scope": "./",
   "display": "standalone",
