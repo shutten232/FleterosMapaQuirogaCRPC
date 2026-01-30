@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#bfe6e2" />
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="stylesheet" href="../shared/ui.css?v=20260130a" />
+  <title>Arrived · Fletero</title>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="../shared/firebase-config.js?v=20260130a"></script>
+  <script src="../shared/utils.global.js?v=20260130a"></script>
+  <script src="../shared/firebase.global.js?v=20260130a"></script>
+</head>
+<body>
+  <div class="wrap" style="max-width:820px">
+    <div class="nav">
+      <div class="brand"><div class="t">Arrived</div><div class="s">Fletero</div></div>
+      <div class="navActions">
+        <a class="pill" href="../panel/index.html"><span class="dot"></span><span>Ir al Panel</span></a>
+        <div class="pill"><span class="dot" id="netDot"></span><span id="netTxt">Red: --</span></div>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="heroTop">
+        <div>
+          <div class="hTitle">Reporte de llegada</div>
+          <div class="hSub">Elegí fletero una vez y tocá <b>LLEGUÉ</b> al llegar. Guarda GPS 1 vez.</div>
+        </div>
+      </div>
+
+      <div class="center">
+        <div class="ring">
+          <div class="ringInner">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+              <path d="M12 21s7-4.4 7-11A7 7 0 0 0 5 10c0 6.6 7 11 7 11Z" stroke="rgba(14,26,43,.75)" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M12 11.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="rgba(14,26,43,.55)"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="h1">
+          LLEGUÉ
+          <small id="who">Fletero: —</small>
+        </div>
+
+        <button class="btn btnPrimary" id="btnLlegue">LLEGUÉ</button>
+
+        <div class="status" id="status">
+          <div>ℹ️</div>
+          <div>
+            <div><b>Listo.</b> Tocá <b>LLEGUÉ</b> cuando llegues.</div>
+            <div class="small">Si no hay GPS, no se registra (para evitar marcas vacías).</div>
+          </div>
+        </div>
+
+        <div class="row">
+          <span class="badge">Pendientes: <b id="qCount" style="color:var(--ink)">0</b></span>
+          <button id="btnSetup" class="btn btnGhost btnSmall">Seleccionar fletero</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="setupCard" style="display:none">
+      <div class="hTitle" style="font-size:16px">Seleccionar fletero</div>
+      <div class="small">Se guarda en este teléfono.</div>
+
+      <label>Fletero</label>
+      <select id="fleteroId">
+        <option value="">Seleccionar…</option>
+        <option value="Joaquin">Joaquin</option>
+        <option value="Rodrigo">Rodrigo</option>
+        <option value="Jorge">Jorge</option>
+        <option value="Agustin">Agustin</option>
+      </select>
+
+      <div class="row" style="justify-content:flex-start">
+        <button id="btnSave" class="btn btnPrimary btnSmall">Guardar</button>
+        <button id="btnCancel" class="btn btnGhost btnSmall">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { uuid, clamp } = window.ArrivedUtils;
+    const { getConfig } = window.ArrivedFirebase;
+
+    const ALLOWED = new Set(['Joaquin','Rodrigo','Jorge','Agustin']);
+
+    const LS = { fleteroId:'arrived_fleteroId', deviceId:'arrived_deviceId', queue:'arrived_queue' };
+    const el=(id)=>document.getElementById(id);
+    const netDot=el('netDot'), netTxt=el('netTxt'), who=el('who');
+    const btnLlegue=el('btnLlegue'), status=el('status');
+    const qCount=el('qCount'), setupCard=el('setupCard');
+    const btnSetup=el('btnSetup'), btnSave=el('btnSave'), btnCancel=el('btnCancel');
+    const fleteroSel=el('fleteroId');
+
+    function setStatus(type,title,msg){
+      const icon = type==='ok'?'✅':type==='err'?'⛔':'ℹ️';
+      status.innerHTML = `<div>${icon}</div><div><div><b>${title}</b></div><div class="small" style="color:${type==='err'?'var(--bad)':type==='ok'?'var(--ok)':'var(--muted)'}">${msg}</div></div>`;
+    }
+    function getDeviceId(){ let id=localStorage.getItem(LS.deviceId); if(!id){id=uuid();localStorage.setItem(LS.deviceId,id);} return id; }
+    function getFleteroId(){ return clamp(localStorage.getItem(LS.fleteroId)||'',60); }
+    function setFleteroId(v){ localStorage.setItem(LS.fleteroId, v); paintWho(); }
+    function paintWho(){ const f=getFleteroId(); who.textContent='Fletero: '+(f||'—'); }
+
+    function getQueue(){ try{return JSON.parse(localStorage.getItem(LS.queue)||'[]');}catch{return [];} }
+    function setQueue(q){ localStorage.setItem(LS.queue, JSON.stringify(q)); qCount.textContent=q.length; }
+    function enqueue(item){ const q=getQueue(); q.push(item); setQueue(q); }
+
+    function updateNet(){
+      const online=navigator.onLine;
+      netDot.style.background = online ? 'rgba(23,178,106,.9)' : 'rgba(255,90,90,.9)';
+      netTxt.textContent = online ? 'Red: online' : 'Red: offline';
+      setQueue(getQueue());
+    }
+
+    async function getGPS(){
+      if(!navigator.geolocation) throw new Error('NO_GEO');
+      return await new Promise((resolve,reject)=>{
+        navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+      });
+    }
+
+    let db=null, user=null;
+
+    async function initFirebase(){
+      const cfg=getConfig();
+      firebase.initializeApp(cfg);
+      await firebase.auth().signInAnonymously();
+      user=firebase.auth().currentUser;
+      db=firebase.database();
+    }
+
+    async function sendLive(payload){ await db.ref('live').child(payload.fleteroId).set(payload); }
+    async function sendLog(payload){ await db.ref('arrivals').push().set(payload); }
+
+    async function flushQueue(){
+      if(!navigator.onLine || !db) return;
+      const q=getQueue(); if(!q.length) return;
+      const rest=[];
+      for(const item of q){
+        try{ await sendLive(item); await sendLog(item); }catch{ rest.push(item); }
+      }
+      setQueue(rest);
+      if(rest.length===0) setStatus('ok','Sincronizado','Pendientes enviados al panel.');
+    }
+
+    function openSetup(){ setupCard.style.display='block'; fleteroSel.value=getFleteroId(); }
+    function closeSetup(){ setupCard.style.display='none'; }
+
+    btnSetup.addEventListener('click', openSetup);
+    btnCancel.addEventListener('click', closeSetup);
+    btnSave.addEventListener('click', ()=>{
+      const v=(fleteroSel.value||'').trim();
+      if(!ALLOWED.has(v)){ setStatus('err','Fletero','Seleccioná un fletero válido.'); return; }
+      setFleteroId(v);
+      closeSetup();
+      setStatus('ok','Listo','Fletero configurado.');
+    });
+
+    btnLlegue.addEventListener('click', async ()=>{
+      try{
+        const f=getFleteroId();
+        if(!ALLOWED.has(f)){ openSetup(); setStatus('err','Fletero','Seleccioná un fletero válido.'); return; }
+
+        btnLlegue.disabled=true;
+        setStatus('info','Enviando','Obteniendo GPS…');
+
+        let gps;
+        try{ gps = await getGPS(); }
+        catch(e){
+          setStatus('err','GPS','No se pudo obtener ubicación. Activá GPS y permisos.');
+          return;
+        }
+
+        const payload = {
+          fleteroId:f,
+          deviceId:getDeviceId(),
+          uid:user?.uid||null,
+          ts: firebase.database.ServerValue.TIMESTAMP,
+          lat: gps.coords.latitude,
+          lng: gps.coords.longitude,
+          accuracy: gps.coords.accuracy
+        };
+
+        if(!navigator.onLine){
+          enqueue(payload);
+          setStatus('ok','Guardado','Sin internet. Quedó pendiente y se enviará al volver.');
+        }else{
+          try{ await sendLive(payload); await sendLog(payload); setStatus('ok','OK','Marcado en el mapa del panel.'); }
+          catch{ enqueue(payload); setStatus('err','Error','No se pudo enviar. Quedó pendiente.'); }
+        }
+        await flushQueue();
+      } finally {
+        btnLlegue.disabled=false;
+      }
+    });
+
+    window.addEventListener('online', ()=>{ updateNet(); flushQueue(); });
+    window.addEventListener('offline', updateNet);
+
+    (async ()=>{
+      updateNet(); paintWho(); setQueue(getQueue());
+      try{ await initFirebase(); setStatus('ok','Conectado','Listo para registrar llegadas.'); await flushQueue(); }
+      catch(e){ setStatus('err','Firebase','Revisá Auth anónimo + dominio autorizado + firebase-config.js.'); }
+      if(!ALLOWED.has(getFleteroId())) openSetup();
+    })();
+  </script>
+</body>
+</html>

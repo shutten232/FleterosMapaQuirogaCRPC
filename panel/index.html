@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#bfe6e2" />
+  <link rel="stylesheet" href="../shared/ui.css?v=20260130a" />
+  <title>Arrived · Panel</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="../shared/firebase-config.js?v=20260130a"></script>
+  <script src="../shared/utils.global.js?v=20260130a"></script>
+  <script src="../shared/firebase.global.js?v=20260130a"></script>
+
+  <style>
+    #map{ height: 520px; border-radius:18px; border:1px solid var(--line); overflow:hidden; }
+    @media (max-width: 920px){ #map{ height: 360px; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <div class="brand"><div class="t">Arrived</div><div class="s">Panel</div></div>
+      <div class="navActions">
+        <a class="pill" href="../fletero/index.html"><span class="dot"></span><span>Ir a Fletero</span></a>
+        <div class="pill"><span class="dot" id="connDot"></span><span id="connTxt">Conexión: --</span></div>
+      </div>
+    </div>
+
+    <div class="hero" style="padding-bottom:12px">
+      <div class="heroTop">
+        <div>
+          <div class="hTitle">Mapa de fleteros</div>
+          <div class="hSub">Un marcador por fletero. Cada nuevo reporte reemplaza la ubicación. Colores por fletero.</div>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:flex-start">
+        <div style="flex:1; min-width:240px">
+          <label style="margin:10px 0 6px">Filtrar por fletero</label>
+          <input id="q" placeholder="Ej: Joaquin" />
+        </div>
+        <div style="flex:0 0 auto; margin-top:26px">
+          <button class="btn btnGhost" id="btnClear" style="width:auto">Limpiar filtro</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <div id="map"></div>
+        <div class="small" id="hint" style="margin-top:10px">—</div>
+      </div>
+
+      <div class="card">
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr><th>Último reporte</th><th>Fletero</th><th>Ubicación</th><th>Precisión</th></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { fmt, mapLink, clamp } = window.ArrivedUtils;
+    const { getConfig } = window.ArrivedFirebase;
+
+    const el=(id)=>document.getElementById(id);
+    const connDot=el('connDot'), connTxt=el('connTxt');
+    const q=el('q'), btnClear=el('btnClear'), tbody=el('tbody'), hint=el('hint');
+
+    function setConn(ok,msg){
+      connDot.style.background = ok ? 'rgba(23,178,106,.9)' : 'rgba(255,90,90,.9)';
+      connTxt.textContent = msg;
+    }
+
+    const map = L.map('map').setView([-31.4167,-64.1833],12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+
+    const COLORS = {
+      'Joaquin': { body:'#1e88ff', stroke:'#0a3a78' },
+      'Rodrigo': { body:'#ff8a00', stroke:'#7a3a00' },
+      'Jorge':   { body:'#22c55e', stroke:'#0b4a2a' },
+      'Agustin': { body:'#a855f7', stroke:'#4a1f7a' }
+    };
+    const ICON_CACHE=new Map();
+    function carDataUri(body,stroke){
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
+        <defs><filter id='s' x='-50%' y='-50%' width='200%' height='200%'>
+          <feDropShadow dx='0' dy='4' stdDeviation='3' flood-color='#00162b' flood-opacity='.35'/>
+        </filter></defs>
+        <g filter='url(#s)'>
+          <path d='M12 34c1-6 4-14 8-16 6-3 18-3 24 0 4 2 7 10 8 16' fill='${body}' stroke='${stroke}' stroke-width='3' stroke-linejoin='round'/>
+          <path d='M10 34h44c2 0 4 2 4 4v10c0 2-2 4-4 4H10c-2 0-4-2-4-4V38c0-2 2-4 4-4Z' fill='${body}' stroke='${stroke}' stroke-width='3' stroke-linejoin='round'/>
+          <path d='M20 26h24' stroke='#cfe8ff' stroke-width='3' stroke-linecap='round' opacity='.9'/>
+          <circle cx='18' cy='50' r='6' fill='#0b1320' stroke='#ffffff' stroke-width='3'/>
+          <circle cx='46' cy='50' r='6' fill='#0b1320' stroke='#ffffff' stroke-width='3'/>
+          <path d='M18 34l8-10h12l8 10' fill='rgba(255,255,255,.22)' stroke='rgba(255,255,255,.35)' stroke-width='2' stroke-linejoin='round'/>
+        </g></svg>`;
+      return "data:image/svg+xml,"+encodeURIComponent(svg);
+    }
+    function getCarIcon(id){
+      const c = COLORS[id] || COLORS['Joaquin'];
+      const key=id+'|'+c.body+'|'+c.stroke;
+      if(ICON_CACHE.has(key)) return ICON_CACHE.get(key);
+      const icon=L.icon({iconUrl:carDataUri(c.body,c.stroke),iconSize:[44,44],iconAnchor:[22,41],popupAnchor:[0,-36]});
+      ICON_CACHE.set(key,icon); return icon;
+    }
+
+    const markers=new Map();
+    const halos=new Map();
+
+    function upsertHalo(r){
+      const c=COLORS[r.fleteroId]||COLORS['Joaquin'];
+      const latlng=[r.lat,r.lng];
+      const ex=halos.get(r.fleteroId);
+      if(ex){ ex.setLatLng(latlng); return; }
+      const halo=L.circleMarker(latlng,{radius:18,weight:2,opacity:.9,fillOpacity:.25,color:c.body,fillColor:c.body}).addTo(map);
+      halos.set(r.fleteroId,halo);
+    }
+
+    function upsertMarker(r){
+      if(r.lat==null||r.lng==null) return;
+      const key=r.fleteroId;
+      const pos=[r.lat,r.lng];
+      const text=`<b>${key}</b><br>${fmt(r.ts)}<br>${r.accuracy?Math.round(r.accuracy)+' m':''}`;
+      const ex=markers.get(key);
+      if(ex){
+        ex.setLatLng(pos);
+        ex.setIcon(getCarIcon(key));
+        ex.setPopupContent(text);
+        upsertHalo(r);
+        try{ map.panTo(pos,{animate:true}); }catch{}
+        return;
+      }
+      const m=L.marker(pos,{icon:getCarIcon(key)}).addTo(map);
+      m.bindPopup(text);
+      markers.set(key,m);
+      upsertHalo(r);
+      try{ map.panTo(pos,{animate:true}); }catch{}
+    }
+
+    function render(rows){
+      tbody.innerHTML='';
+      rows.forEach(r=>{
+        const tr=document.createElement('tr');
+        const link=mapLink(r.lat,r.lng);
+        tr.innerHTML = `<td>${fmt(r.ts)}</td>
+          <td><b>${r.fleteroId||''}</b><div class="small">${r.deviceId||''}</div></td>
+          <td>${link?`<a href="${link}" target="_blank" rel="noopener">Abrir</a>`:'<span class="small">—</span>'}</td>
+          <td>${r.accuracy?Math.round(r.accuracy)+' m':'—'}</td>`;
+        tbody.appendChild(tr);
+      });
+      hint.textContent = rows.length ? `Fleteros visibles: ${rows.length}.` : 'Sin datos. Esperando reportes...';
+    }
+
+    let rowsAll=[];
+    function applyFilter(){
+      const term=clamp(q.value,60).toLowerCase();
+      const filtered=term?rowsAll.filter(r=>String(r.fleteroId||'').toLowerCase().includes(term)):rowsAll;
+      render(filtered);
+      for(const [id,m] of markers.entries()){
+        const show=!term || id.toLowerCase().includes(term);
+        if(show){ if(!map.hasLayer(m)) m.addTo(map); if(halos.get(id) && !map.hasLayer(halos.get(id))) halos.get(id).addTo(map); }
+        else{ if(map.hasLayer(m)) map.removeLayer(m); if(halos.get(id) && map.hasLayer(halos.get(id))) map.removeLayer(halos.get(id)); }
+      }
+    }
+
+    btnClear.addEventListener('click', ()=>{ q.value=''; applyFilter(); });
+    q.addEventListener('input', applyFilter);
+
+    (async ()=>{
+      try{
+        const cfg=getConfig();
+        firebase.initializeApp(cfg);
+        await firebase.auth().signInAnonymously();
+        const db=firebase.database();
+        db.ref('live').on('value', (snap)=>{
+          const val=snap.val()||{};
+          const arr=Object.values(val);
+          arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
+          rowsAll=arr;
+          arr.forEach(upsertMarker);
+          applyFilter();
+        });
+        setConn(true,'Conexión: OK');
+        setTimeout(()=>{ try{ map.invalidateSize(); }catch{} }, 250);
+      }catch(e){
+        setConn(false,'Conexión: ERROR');
+        hint.textContent='Revisá firebase-config.js, Auth anónimo y dominio autorizado.';
+      }
+    })();
+  </script>
+</body>
+</html>
