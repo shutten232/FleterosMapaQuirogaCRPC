@@ -18,8 +18,8 @@
   <script src="../shared/firebase.global.js?v=20260130a"></script>
 
   <style>
-    #map{ height: 520px; border-radius:18px; border:1px solid var(--line); overflow:hidden; }
-    @media (max-width: 920px){ #map{ height: 360px; } }
+    #map{ height: min(62vh, 720px); width:100%; border-radius:18px; border:1px solid var(--line); overflow:hidden; }
+    @media (max-width: 920px){ #map{ height: 52vh; } } }
   </style>
   <link rel="apple-touch-icon" href="../icons/icon-192.png">
 
@@ -88,23 +88,21 @@
       </div>
     </div>
 
-    <div class="grid2">
-      <div class="card">
-        <div id="map"></div>
-        <div class="small" id="hint" style="margin-top:10px">—</div>
-      </div>
+    <div class="card">
+  <div id="map"></div>
+  <div class="small" id="hint" style="margin-top:10px">—</div>
+</div>
 
-      <div class="card">
-        <div class="tableWrap">
-          <table>
-            <thead>
-              <tr><th>Último reporte</th><th>Fletero</th><th>Ubicación</th><th>Precisión</th><th>Acciones</th></tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+<div class="card">
+  <div class="tableWrap">
+    <table>
+      <thead>
+        <tr><th>Último reporte</th><th>Fletero</th><th>Ubicación</th><th>Precisión</th><th>Acciones</th></tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
   </div>
 
 
