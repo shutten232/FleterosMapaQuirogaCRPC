@@ -1,5 +1,5 @@
-const CACHE = 'arrived-html-v3';
-const ASSET_CACHE = 'arrived-assets-v3';
+const CACHE = 'arrived-html-v4';
+const ASSET_CACHE = 'arrived-assets-v4';
 
 const ASSETS = [
   './',

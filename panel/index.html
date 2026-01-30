@@ -22,6 +22,41 @@
     @media (max-width: 920px){ #map{ height: 360px; } }
   </style>
   <link rel="apple-touch-icon" href="../icons/icon-192.png">
+
+  <link rel="apple-touch-icon" href="../icons/icon-192.png">
+  <script>
+    (function(){
+      // Manifest dinámico para GitHub Pages (detecta /REPO/ automáticamente)
+      var parts = location.pathname.split('/').filter(Boolean);
+      var repoRoot = '/';
+      if (location.hostname.endsWith('github.io') && parts.length >= 1) repoRoot = '/' + parts[0] + '/';
+
+      var startUrl = location.origin + repoRoot + "fletero/";
+      var scopeUrl = location.origin + repoRoot;
+
+      var manifest = {
+        name: "Arrived Fleteros",
+        short_name: "Arrived",
+        start_url: startUrl,
+        scope: scopeUrl,
+        display: "standalone",
+        orientation: "portrait",
+        background_color: "#bfe6e2",
+        theme_color: "#bfe6e2",
+        icons: [
+          { src: location.origin + repoRoot + "icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: location.origin + repoRoot + "icons/icon-512.png", sizes: "512x512", type: "image/png" }
+        ]
+      };
+
+      var href = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(manifest));
+      var link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = href;
+      document.head.appendChild(link);
+    })();
+  </script>
+
 </head>
 <body>
   <div class="wrap">

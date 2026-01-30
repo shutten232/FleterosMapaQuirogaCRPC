@@ -1,7 +1,7 @@
 {
   "name": "Arrived Fleteros",
   "short_name": "Arrived",
-  "start_url": "./fletero/index.html",
+  "start_url": "./fletero/",
   "scope": "./",
   "display": "standalone",
   "background_color": "#bfe6e2",
