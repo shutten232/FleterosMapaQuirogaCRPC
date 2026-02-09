@@ -3,77 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#bfe6e2" />
-  <link rel="stylesheet" href="../shared/ui.css?v=20260130a" />
-  <title>Arrived · Panel</title>
+  <link rel="stylesheet" href="../shared/ui.css?v=local" />
+  <title>Fleteros · Panel (Local)</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <script src="../shared/utils.global.js?v=local"></script>
+<style>
+    #map{ height: min(62vh, 720px); width:100%; border-radius:18px; border:1px solid var(--line); overflow:hidden; }
+    @media (max-width: 920px){ #map{ height: 52vh; } }
+  </style>
+
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="../shared/firebase-config.js?v=20260130a"></script>
-  <script src="../shared/utils.global.js?v=20260130a"></script>
-  <script src="../shared/firebase.global.js?v=20260130a"></script>
-
-  <style>
-    #map{ height: min(62vh, 720px); width:100%; border-radius:18px; border:1px solid var(--line); overflow:hidden; }
-    @media (max-width: 920px){ #map{ height: 52vh; } } }
-  </style>
-  <link rel="apple-touch-icon" href="../icons/icon-192.png">
-
-  <link rel="apple-touch-icon" href="../icons/icon-192.png">
-  <script>
-    (function(){
-      // Manifest dinámico para GitHub Pages (detecta /REPO/ automáticamente)
-      var parts = location.pathname.split('/').filter(Boolean);
-      var repoRoot = '/';
-      if (location.hostname.endsWith('github.io') && parts.length >= 1) repoRoot = '/' + parts[0] + '/';
-
-      var startUrl = location.origin + repoRoot + "fletero/";
-      var scopeUrl = location.origin + repoRoot;
-
-      var manifest = {
-        name: "Fleteros",
-        short_name: "Arrived",
-        start_url: startUrl,
-        scope: scopeUrl,
-        display: "standalone",
-        orientation: "portrait",
-        background_color: "#bfe6e2",
-        theme_color: "#bfe6e2",
-        icons: [
-          { src: location.origin + repoRoot + "icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: location.origin + repoRoot + "icons/icon-512.png", sizes: "512x512", type: "image/png" }
-        ]
-      };
-
-      var href = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(manifest));
-      var link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = href;
-      document.head.appendChild(link);
-    })();
-  </script>
+  <script src="../shared/firebase-config.js?v=fb1"></script>
+  <script src="../shared/firebase.global.js?v=fb1"></script>
 
 </head>
 <body>
   <div class="wrap">
     <div class="nav">
-      <div class="brand"><div class="t">Arrived</div><div class="s">Panel</div></div>
+      <div class="brand"><div class="t">Fleteros</div><div class="s">Panel (Local)</div></div>
       <div class="navActions">
         <a class="pill" href="../fletero/index.html"><span class="dot"></span><span>Ir a Fletero</span></a>
-        <button class="pill" id="btnAdmin" type="button" style="cursor:pointer"><span class="dot"></span><span>Admin</span></button>
-        <div class="pill"><span class="dot" id="connDot"></span><span id="connTxt">Conexión: --</span></div>
+        <div class="pill"><span class="dot" style="background:rgba(23,178,106,.9)"></span><span>Modo: Firebase</span></div>
       </div>
     </div>
 
     <div class="hero" style="padding-bottom:12px">
       <div class="heroTop">
         <div>
-          <div class="hTitle">Mapa de fleteros</div>
-          <div class="hSub">Un marcador por fletero. Cada nuevo reporte reemplaza la ubicación. Colores por fletero.</div>
+          <div class="hTitle">Asignar ruta → Ver en Fletero</div>
+          <div class="hSub">Prueba local: se guarda en localStorage y se sincroniza entre pestañas.</div>
         </div>
       </div>
 
@@ -83,242 +46,300 @@
           <input id="q" placeholder="Ej: Joaquin" />
         </div>
         <div style="flex:0 0 auto; margin-top:26px">
-          <button class="btn btnGhost" id="btnClear" style="width:auto">Limpiar filtro</button>
+          <button class="btn btnGhost" id="btnClear" style="width:auto" type="button">Limpiar</button>
         </div>
       </div>
     </div>
 
     <div class="card">
-  <div id="map"></div>
-  <div class="small" id="hint" style="margin-top:10px">—</div>
-</div>
-
-<div class="card">
-  <div class="tableWrap">
-    <table>
-      <thead>
-        <tr><th>Último reporte</th><th>Fletero</th><th>Ubicación</th><th>Precisión</th><th>Acciones</th></tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
-</div>
-  </div>
-
-
-  <div class="card" id="adminCard" style="display:none">
-    <div class="hTitle" style="font-size:16px">Modo Admin</div>
-    <div class="small">PIN local (no es seguridad real). Para seguridad real: usar UID admin en reglas.</div>
-
-    <label>PIN</label>
-    <input id="adminPin" placeholder="PIN" inputmode="numeric" />
-
-    <div class="row" style="justify-content:flex-start">
-      <button id="adminUnlock" class="btn btnPrimary btnSmall" type="button">Desbloquear</button>
-      <button id="adminLock" class="btn btnGhost btnSmall" type="button">Bloquear</button>
-      <button id="adminClose" class="btn btnGhost btnSmall" type="button">Cerrar</button>
+      <div id="map"></div>
+      <div class="small" id="hint" style="margin-top:10px">—</div>
     </div>
 
-    <div class="small" id="adminHint" style="margin-top:8px">—</div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card">
+        <div class="hTitle" style="font-size:16px">Asignar ruta</div>
+        <div class="small">1 por línea. Opcional: Taller | nota.</div>
+
+        <label style="margin:10px 0 6px">Fletero</label>
+        <select id="rbFletero">
+          <option value="">Seleccionar…</option>
+          <option value="Joaquin">Joaquin</option>
+          <option value="Rodrigo">Rodrigo</option>
+          <option value="Jorge">Jorge</option>
+          <option value="Agustin">Agustin</option>
+        </select>
+
+        <label style="margin:10px 0 6px">Lista de talleres</label>
+        <textarea id="rbStops" rows="8" placeholder="MINUTO\nBRUNO\nSERVINCOR"></textarea>
+
+        <div class="row" style="justify-content:flex-start">
+          <button class="btn btnPrimary btnSmall" id="rbPublish" type="button">Reemplazar ruta</button>
+          <button class="btn btnGhost btnSmall" id="rbAppend" type="button">Sumar talleres</button>
+          <button class="btn btnGhost btnSmall" id="rbClearRoute" type="button">Borrar ruta</button>
+          <span class="badge">Estado: <b id="rbStatus" style="color:var(--ink)">—</b></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hTitle" style="font-size:16px">Rutas activas</div>
+        <div class="small">Checklist por fletero.</div>
+        <div id="routesCards" style="display:grid; gap:10px; margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr><th>Último reporte</th><th>Fletero</th><th>Ubicación</th><th>Precisión</th><th>Estado</th></tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <script>
-    const { fmt, mapLink, clamp } = window.ArrivedUtils;
-    const { getConfig } = window.ArrivedFirebase;
+<script>
+(async ()=>{
 
-    const el=(id)=>document.getElementById(id);
-    const connDot=el('connDot'), connTxt=el('connTxt');
-    const q=el('q'), btnClear=el('btnClear'), tbody=el('tbody'), hint=el('hint');
-    const btnAdmin = el('btnAdmin');
-    const adminCard = el('adminCard');
-    const adminPin = el('adminPin');
-    const adminUnlock = el('adminUnlock');
-    const adminLock = el('adminLock');
-    const adminClose = el('adminClose');
-    const adminHint = el('adminHint');
+  const { fmt, mapLink, clamp } = window.ArrivedUtils;
+  let db=null, user=null;
+  const FLETEROS = ['Joaquin','Rodrigo','Jorge','Agustin'];
+  const el=(id)=>document.getElementById(id);
 
-    const LS_ADMIN = 'arrived_admin_unlocked';
-    const ADMIN_PIN = '2468'; // Cambiar por tu PIN
-    let isAdmin = (localStorage.getItem(LS_ADMIN)==='1');
+  const q=el('q'), btnClear=el('btnClear'), hint=el('hint'), tbody=el('tbody');
+  const rbFletero=el('rbFletero'), rbStops=el('rbStops'), rbPublish=el('rbPublish'), rbAppend=el('rbAppend'), rbClearRoute=el('rbClearRoute'), rbStatus=el('rbStatus');
+  const routesCards=el('routesCards');
 
-    function paintAdmin(){
-      adminHint.textContent = isAdmin ? 'Admin: desbloqueado' : 'Admin: bloqueado';
+  async function initFirebase(){
+    const r = await window.FirebaseRTDB.init();
+    db = r.db; user = r.user;
+    db.ref('.info/connected').on('value', (snap)=>{
+      const ok = !!snap.val();
+      const dot = document.getElementById('connDot');
+      const txt = document.getElementById('connTxt');
+      if(dot) dot.style.background = ok ? 'rgba(23,178,106,.9)' : 'rgba(239,68,68,.9)';
+      if(txt) txt.textContent = 'Conexión: ' + (ok?'online':'offline');
+    });
+  }
+
+
+  const map = L.map('map').setView([-31.4167,-64.1833],12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+
+  const COLORS = {
+    'Joaquin': { body:'#1e88ff', stroke:'#0a3a78' },
+    'Rodrigo': { body:'#ff8a00', stroke:'#7a3a00' },
+    'Jorge':   { body:'#22c55e', stroke:'#0b4a2a' },
+    'Agustin': { body:'#a855f7', stroke:'#4a1f7a' }
+  };
+  const ICON_CACHE=new Map();
+  function carDataUri(body,stroke){
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
+      <defs><filter id='s' x='-50%' y='-50%' width='200%' height='200%'>
+        <feDropShadow dx='0' dy='4' stdDeviation='3' flood-color='#00162b' flood-opacity='.35'/>
+      </filter></defs>
+      <g filter='url(#s)'>
+        <path d='M12 34c1-6 4-14 8-16 6-3 18-3 24 0 4 2 7 10 8 16' fill='${body}' stroke='${stroke}' stroke-width='3' stroke-linejoin='round'/>
+        <path d='M10 34h44c2 0 4 2 4 4v10c0 2-2 4-4 4H10c-2 0-4-2-4-4V38c0-2 2-4 4-4Z' fill='${body}' stroke='${stroke}' stroke-width='3' stroke-linejoin='round'/>
+        <circle cx='18' cy='50' r='6' fill='#0b1320' stroke='#ffffff' stroke-width='3'/>
+        <circle cx='46' cy='50' r='6' fill='#0b1320' stroke='#ffffff' stroke-width='3'/>
+      </g></svg>`;
+    return "data:image/svg+xml,"+encodeURIComponent(svg);
+  }
+  function getCarIcon(id){
+    const c = COLORS[id] || COLORS['Joaquin'];
+    const key=id+'|'+c.body+'|'+c.stroke;
+    if(ICON_CACHE.has(key)) return ICON_CACHE.get(key);
+    const icon=L.icon({iconUrl:carDataUri(c.body,c.stroke),iconSize:[44,44],iconAnchor:[22,41],popupAnchor:[0,-36]});
+    ICON_CACHE.set(key,icon); return icon;
+  }
+
+  const markers=new Map();
+  function upsertMarker(r){
+    if(r?.lat==null||r?.lng==null) return;
+    const key=r.fleteroId;
+    const pos=[r.lat,r.lng];
+    const text=`<b>${key}</b><br>${fmt(r.ts)}<br>${r.state||''}`;
+    const ex=markers.get(key);
+    if(ex){
+      ex.setLatLng(pos); ex.setIcon(getCarIcon(key)); ex.setPopupContent(text);
+      return;
     }
-    function openAdmin(){ adminCard.style.display='block'; paintAdmin(); adminPin.value=''; adminPin.focus(); }
-    function closeAdmin(){ adminCard.style.display='none'; }
-    function lockAdmin(){ isAdmin=false; localStorage.setItem(LS_ADMIN,'0'); paintAdmin(); applyFilter(); }
-    function unlockAdmin(){
-      if(String(adminPin.value||'').trim() !== ADMIN_PIN){
-        adminHint.textContent = 'PIN incorrecto.';
-        return;
-      }
-      isAdmin=true;
-      localStorage.setItem(LS_ADMIN,'1');
-      paintAdmin();
-      applyFilter();
+    const m=L.marker(pos,{icon:getCarIcon(key)}).addTo(map);
+    m.bindPopup(text);
+    markers.set(key,m);
+  }
+
+  function normName(s){ return String(s||'').trim().toLowerCase(); }
+
+  function parseStops(text){
+    const lines = String(text||'').split('\n').map(l=>l.trim()).filter(Boolean);
+    return lines.map((line, idx)=>{
+      const parts = line.split('|').map(x=>x.trim());
+      return { id:'s'+(idx+1), order:idx+1, name:parts[0]||'', note:parts[1]||'', done:false };
+    }).filter(s=>s.name);
+  }
+  function setRb(s){ rbStatus.textContent=s; }
+
+  async function publishRoute(fleteroName, stops){
+    const routeId = 'r_' + Date.now() + '_' + fleteroName.toLowerCase();
+    await db.ref('routesActive/'+fleteroName).set({
+      routeId, fleteroId: fleteroName, createdAt: firebase.database.ServerValue.TIMESTAMP,
+      stops
+    });
+    await db.ref('status/'+fleteroName).set({ state:'EN_RUTA', routeId, ts: firebase.database.ServerValue.TIMESTAMP });
+    return routeId;
+  }
+  
+  async function appendStops(fleteroName, newStops){
+    // leer ruta actual (localdb: on() dispara inmediato)
+    const curSnap = await new Promise((resolve)=> db.ref('routesActive/'+fleteroName).on('value', resolve));
+    const cur = curSnap.val() || null;
+
+    const existing = (cur && Array.isArray(cur.stops)) ? cur.stops.slice() : [];
+    const seen = new Set(existing.map(s=>normName(s.name)));
+
+    const toAdd = newStops
+      .filter(s=> !seen.has(normName(s.name)))
+      .map(s=>({ ...s, done:false }));
+
+    const merged = existing.concat(toAdd).map((s,i)=>({ ...s, order:i+1 }));
+    const routeId = (cur && cur.routeId) ? cur.routeId : ('r_' + Date.now() + '_' + fleteroName.toLowerCase());
+
+    await db.ref('routesActive/'+fleteroName).set({
+      routeId,
+      fleteroId: fleteroName,
+      createdAt: (cur && cur.createdAt) ? cur.createdAt : firebase.database.ServerValue.TIMESTAMP,
+      stops: merged
+    });
+
+    await db.ref('status/'+fleteroName).set({ state:'EN_RUTA', routeId, ts: firebase.database.ServerValue.TIMESTAMP });
+    return { routeId, added: toAdd.length, total: merged.length };
+  }
+
+  async function clearRoute(fleteroName){
+    await db.ref('routesActive/'+fleteroName).remove();
+    await db.ref('status/'+fleteroName).set({ state:'SIN_RUTA', ts: firebase.database.ServerValue.TIMESTAMP });
+  }
+
+  rbPublish.addEventListener('click', async ()=>{
+    const f = rbFletero.value;
+    if(!FLETEROS.includes(f)){ setRb('Elegí fletero'); return; }
+    const stops = parseStops(rbStops.value);
+    if(!stops.length){ setRb('Lista vacía'); return; }
+    setRb('Publicando…');
+    const rid = await publishRoute(f, stops);
+    setRb('OK ('+rid+')');
+  });
+
+  rbAppend.addEventListener('click', async ()=>{
+    const f = rbFletero.value;
+    if(!FLETEROS.includes(f)){ setRb('Elegí fletero'); return; }
+    const stops = parseStops(rbStops.value);
+    if(!stops.length){ setRb('Lista vacía'); return; }
+    setRb('Sumando…');
+    try{
+      const res = await appendStops(f, stops);
+      setRb(`OK (sumó ${res.added}, total ${res.total})`);
+    }catch(e){
+      console.error(e);
+      setRb('Error');
     }
+  });
+  rbClearRoute.addEventListener('click', async ()=>{
+    const f = rbFletero.value;
+    if(!FLETEROS.includes(f)){ setRb('Elegí fletero'); return; }
+    setRb('Borrando…');
+    await clearRoute(f);
+    setRb('OK');
+  });
 
-    btnAdmin.addEventListener('click', openAdmin);
-    adminClose.addEventListener('click', closeAdmin);
-    adminLock.addEventListener('click', lockAdmin);
-    adminUnlock.addEventListener('click', unlockAdmin);
+  const routesActive = {};
+  const statusBy = {};
+  let rowsAll = [];
 
+  function renderRoutes(){
+    routesCards.innerHTML='';
+    FLETEROS.forEach(name=>{
+      const r = routesActive[name];
+      const st = statusBy[name] || {state:'—'};
+      const card = document.createElement('div');
+      card.style.border='1px solid var(--line)';
+      card.style.borderRadius='18px';
+      card.style.padding='12px';
+      card.style.background='rgba(255,255,255,.55)';
+      const stops = (r && Array.isArray(r.stops)) ? r.stops.slice().sort((a,b)=>(a.order||0)-(b.order||0)) : [];
+      const done = stops.filter(s=>s.done).length;
+      const total = stops.length;
+      const items = stops.slice(0,10).map(s=>{
+        const mark = s.done ? '✅' : '⬜';
+        const note = s.note ? ` <span class="small">(${s.note})</span>` : '';
+        return `<div class="small" style="margin-top:4px">${mark} <b>${s.order}.</b> ${s.name}${note}</div>`;
+      }).join('') || '<div class="small" style="margin-top:6px">Sin ruta</div>';
+      card.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <div><b>${name}</b> <span class="badge" style="margin-left:8px">Estado: <b style="color:var(--ink)">${st.state||'—'}</b></span></div>
+          <div class="badge">Progreso: <b style="color:var(--ink)">${total?done+'/'+total:'—'}</b></div>
+        </div>${items}`;
+      routesCards.appendChild(card);
+    });
+  }
 
-    function setConn(ok,msg){
-      connDot.style.background = ok ? 'rgba(23,178,106,.9)' : 'rgba(255,90,90,.9)';
-      connTxt.textContent = msg;
+  function renderTable(rows){
+    tbody.innerHTML='';
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      const link=mapLink(r.lat,r.lng);
+      tr.innerHTML = `<td>${fmt(r.ts)}</td>
+        <td><b>${r.fleteroId||''}</b></td>
+        <td>${link?`<a href="${link}" target="_blank" rel="noopener">Abrir</a>`:'<span class="small">—</span>'}</td>
+        <td>${r.accuracy?Math.round(r.accuracy)+' m':'—'}</td>
+        <td>${r.state||'—'}</td>`;
+      tbody.appendChild(tr);
+    });
+    hint.textContent = rows.length ? `Fleteros visibles: ${rows.length}.` : 'Sin reportes todavía.';
+  }
+
+  function applyFilter(){
+    const term=clamp(q.value,60).toLowerCase();
+    const filtered=term?rowsAll.filter(r=>String(r.fleteroId||'').toLowerCase().includes(term)):rowsAll;
+    renderTable(filtered);
+    for(const [id,m] of markers.entries()){
+      const show=!term || id.toLowerCase().includes(term);
+      if(show){ if(!map.hasLayer(m)) m.addTo(map); }
+      else{ if(map.hasLayer(m)) map.removeLayer(m); }
     }
+  }
+  btnClear.addEventListener('click', ()=>{ q.value=''; applyFilter(); });
+  q.addEventListener('input', applyFilter);
 
-    const map = L.map('map').setView([-31.4167,-64.1833],12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+  await initFirebase();
 
-    const COLORS = {
-      'Joaquin': { body:'#1e88ff', stroke:'#0a3a78' },
-      'Rodrigo': { body:'#ff8a00', stroke:'#7a3a00' },
-      'Jorge':   { body:'#22c55e', stroke:'#0b4a2a' },
-      'Agustin': { body:'#a855f7', stroke:'#4a1f7a' }
-    };
-    const ICON_CACHE=new Map();
-    function carDataUri(body,stroke){
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
-        <defs><filter id='s' x='-50%' y='-50%' width='200%' height='200%'>
-          <feDropShadow dx='0' dy='4' stdDeviation='3' flood-color='#00162b' flood-opacity='.35'/>
-        </filter></defs>
-        <g filter='url(#s)'>
-          <path d='M12 34c1-6 4-14 8-16 6-3 18-3 24 0 4 2 7 10 8 16' fill='${body}' stroke='${stroke}' stroke-width='3' stroke-linejoin='round'/>
-          <path d='M10 34h44c2 0 4 2 4 4v10c0 2-2 4-4 4H10c-2 0-4-2-4-4V38c0-2 2-4 4-4Z' fill='${body}' stroke='${stroke}' stroke-width='3' stroke-linejoin='round'/>
-          <path d='M20 26h24' stroke='#cfe8ff' stroke-width='3' stroke-linecap='round' opacity='.9'/>
-          <circle cx='18' cy='50' r='6' fill='#0b1320' stroke='#ffffff' stroke-width='3'/>
-          <circle cx='46' cy='50' r='6' fill='#0b1320' stroke='#ffffff' stroke-width='3'/>
-          <path d='M18 34l8-10h12l8 10' fill='rgba(255,255,255,.22)' stroke='rgba(255,255,255,.35)' stroke-width='2' stroke-linejoin='round'/>
-        </g></svg>`;
-      return "data:image/svg+xml,"+encodeURIComponent(svg);
-    }
-    function getCarIcon(id){
-      const c = COLORS[id] || COLORS['Joaquin'];
-      const key=id+'|'+c.body+'|'+c.stroke;
-      if(ICON_CACHE.has(key)) return ICON_CACHE.get(key);
-      const icon=L.icon({iconUrl:carDataUri(c.body,c.stroke),iconSize:[44,44],iconAnchor:[22,41],popupAnchor:[0,-36]});
-      ICON_CACHE.set(key,icon); return icon;
-    }
+  db.ref('live').on('value', (snap)=>{
+    const val = snap.val() || {};
+    const arr = Object.values(val);
+    arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    rowsAll = arr;
+    arr.forEach(upsertMarker);
+    applyFilter();
+  });
+  db.ref('routesActive').on('value', (snap)=>{
+    const v = snap.val() || {};
+    Object.keys(routesActive).forEach(k=>delete routesActive[k]);
+    Object.entries(v).forEach(([k,val])=> routesActive[k]=val);
+    renderRoutes();
+  });
+  db.ref('status').on('value', (snap)=>{
+    const v = snap.val() || {};
+    Object.keys(statusBy).forEach(k=>delete statusBy[k]);
+    Object.entries(v).forEach(([k,val])=> statusBy[k]=val);
+    renderRoutes();
+  });
 
-    const markers=new Map();
-    const halos=new Map();
+  setTimeout(()=>{ try{ map.invalidateSize(); }catch{} }, 250);
 
-    function upsertHalo(r){
-      const c=COLORS[r.fleteroId]||COLORS['Joaquin'];
-      const latlng=[r.lat,r.lng];
-      const ex=halos.get(r.fleteroId);
-      if(ex){ ex.setLatLng(latlng); return; }
-      const halo=L.circleMarker(latlng,{radius:18,weight:2,opacity:.9,fillOpacity:.25,color:c.body,fillColor:c.body}).addTo(map);
-      halos.set(r.fleteroId,halo);
-    }
-
-    function upsertMarker(r){
-      if(r.lat==null||r.lng==null) return;
-      const key=r.fleteroId;
-      const pos=[r.lat,r.lng];
-      const text=`<b>${key}</b><br>${fmt(r.ts)}<br>${r.accuracy?Math.round(r.accuracy)+' m':''}`;
-      const ex=markers.get(key);
-      if(ex){
-        ex.setLatLng(pos);
-        ex.setIcon(getCarIcon(key));
-        ex.setPopupContent(text);
-        upsertHalo(r);
-        try{ map.panTo(pos,{animate:true}); }catch{}
-        return;
-      }
-      const m=L.marker(pos,{icon:getCarIcon(key)}).addTo(map);
-      m.bindPopup(text);
-      markers.set(key,m);
-      upsertHalo(r);
-      try{ map.panTo(pos,{animate:true}); }catch{}
-    }
-
-    function render(rows){
-      tbody.innerHTML='';
-      rows.forEach(r=>{
-        const tr=document.createElement('tr');
-        const link=mapLink(r.lat,r.lng);
-        tr.innerHTML = `<td>${fmt(r.ts)}</td>
-          <td><b>${r.fleteroId||''}</b><div class="small">${r.deviceId||''}</div></td>
-          <td>${link?`<a href="${link}" target="_blank" rel="noopener">Abrir</a>`:'<span class="small">—</span>'}</td>
-          <td>${r.accuracy?Math.round(r.accuracy)+' m':'—'}</td>
-          <td>${isAdmin?`<button type="button" class="btn btnGhost btnSmall" data-del="${r.fleteroId||''}" style="width:auto">Eliminar</button>`:`<span class="small">—</span>`}</td>`;
-        tbody.appendChild(tr);
-        const btn = tr.querySelector('[data-del]');
-        if(btn){ btn.addEventListener('click', async ()=>{
-          const name = btn.getAttribute('data-del');
-          if(!name) return;
-          if(!confirm('Eliminar marca y logs recientes de: '+name+' ?')) return;
-          try{ await deleteLiveAndLogs(name); }
-          catch{ alert('No se pudo eliminar. Revisá reglas RTDB.'); }
-        }); }
-
-      });
-      hint.textContent = rows.length ? `Fleteros visibles: ${rows.length}.` : 'Sin datos. Esperando reportes...';
-    }
-
-    let rowsAll=[];
-    function applyFilter(){
-      const term=clamp(q.value,60).toLowerCase();
-      const filtered=term?rowsAll.filter(r=>String(r.fleteroId||'').toLowerCase().includes(term)):rowsAll;
-      render(filtered);
-      for(const [id,m] of markers.entries()){
-        const show=!term || id.toLowerCase().includes(term);
-        if(show){ if(!map.hasLayer(m)) m.addTo(map); if(halos.get(id) && !map.hasLayer(halos.get(id))) halos.get(id).addTo(map); }
-        else{ if(map.hasLayer(m)) map.removeLayer(m); if(halos.get(id) && map.hasLayer(halos.get(id))) map.removeLayer(halos.get(id)); }
-      }
-    }
-
-    btnClear.addEventListener('click', ()=>{ q.value=''; applyFilter(); });
-    q.addEventListener('input', applyFilter);
-
-    (async ()=>{
-      try{
-        const cfg=getConfig();
-        firebase.initializeApp(cfg);
-        await firebase.auth().signInAnonymously();
-        const db=firebase.database();
-
-        async function deleteLiveAndLogs(fleteroName){
-          if(!isAdmin){ openAdmin(); return; }
-          // 1) delete live marker
-          await db.ref('live').child(fleteroName).remove();
-
-          // 2) delete recent logs for this fletero (best-effort)
-          try{
-            const snap = await db.ref('arrivals').orderByChild('fleteroId').equalTo(fleteroName).limitToLast(500).get();
-            const val = snap.val() || {};
-            const updates = {};
-            Object.keys(val).forEach(k => { updates['arrivals/'+k] = null; });
-            if(Object.keys(updates).length){
-              await db.ref().update(updates);
-            }
-          }catch{}
-        }
-
-        db.ref('live').on('value', (snap)=>{
-          const val=snap.val()||{};
-          const arr=Object.values(val);
-          arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
-          rowsAll=arr;
-          arr.forEach(upsertMarker);
-          applyFilter();
-        });
-        setConn(true,'Conexión: OK');
-        setTimeout(()=>{ try{ map.invalidateSize(); }catch{} }, 250);
-      }catch(e){
-        setConn(false,'Conexión: ERROR');
-        hint.textContent='Revisá firebase-config.js, Auth anónimo y dominio autorizado.';
-      }
-    })();
-  </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('../sw.js').catch(()=>{});
-    }
-  </script>
+})();
+</script>
 </body>
 </html>

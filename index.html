@@ -3,96 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#bfe6e2" />
-  <link rel="stylesheet" href="./shared/ui.css" />
-  <title>Arrived · Fleteros</title>
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <script>
-    (function(){
-      // Manifest dinámico para GitHub Pages (detecta /REPO/ automáticamente)
-      var parts = location.pathname.split('/').filter(Boolean);
-      var repoRoot = '/';
-      if (location.hostname.endsWith('github.io') && parts.length >= 1) repoRoot = '/' + parts[0] + '/';
-
-      var startUrl = location.origin + repoRoot + "fletero/";
-      var scopeUrl = location.origin + repoRoot;
-
-      var manifest = {
-        name: "Fleteros",
-        short_name: "Arrived",
-        start_url: startUrl,
-        scope: scopeUrl,
-        display: "standalone",
-        orientation: "portrait",
-        background_color: "#bfe6e2",
-        theme_color: "#bfe6e2",
-        icons: [
-          { src: location.origin + repoRoot + "icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: location.origin + repoRoot + "icons/icon-512.png", sizes: "512x512", type: "image/png" }
-        ]
-      };
-
-      var href = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(manifest));
-      var link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = href;
-      document.head.appendChild(link);
-    })();
-  </script>
-
+  <link rel="stylesheet" href="./shared/ui.css?v=local" />
+  <title>Fleteros · Local</title>
 </head>
 <body>
   <div class="wrap" style="max-width:980px">
     <div class="nav">
-      <div class="brand"><div class="t">Arrived</div><div class="s">Landing</div></div>
-      <div class="navActions"><div class="pill"><span class="dot"></span><span>GitHub Pages</span></div></div>
+      <div class="brand"><div class="t">Fleteros</div><div class="s">Prueba Local</div></div>
+      <div class="navActions"><div class="pill"><span class="dot" style="background:rgba(23,178,106,.9)"></span><span>LocalStorage</span></div></div>
     </div>
-
     <div class="hero">
       <div class="heroTop">
         <div>
-          <div class="hTitle">Arrived</div>
-          <div class="hSub">Fleteros: Joaquin, Rodrigo, Jorge, Agustin. Reporte por botón + panel con mapa (RTDB).</div>
+          <div class="hTitle">Prueba local (sin Firebase)</div>
+          <div class="hSub">Panel asigna ruta. Fletero la ve y marca llegadas. El mapa muestra la última ubicación simulada.</div>
         </div>
       </div>
-
-      <div class="center" style="padding-top:10px">
-        <div class="ring">
-          <div class="ringInner">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-              <path d="M12 21s7-4.4 7-11A7 7 0 0 0 5 10c0 6.6 7 11 7 11Z" stroke="rgba(14,26,43,.75)" stroke-width="2" stroke-linejoin="round"/>
-              <path d="M12 11.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="rgba(14,26,43,.55)"/>
-            </svg>
-          </div>
-        </div>
-
-        <div class="h1">
-          Elegí módulo
-          <small>En celular: Fletero. En PC: Panel.</small>
-        </div>
-
-        <div class="row" style="margin-top:14px">
-          <a class="btn btnPrimary" href="./fletero/index.html" style="text-align:center; width:min(520px,100%)">Ir a Fletero</a>
-          <a class="btn btnGhost" href="./panel/index.html" style="text-align:center; width:min(520px,100%)">Ir a Panel</a>
-        </div>
-
-        <div class="status">
-          <div>ℹ️</div>
-          <div>
-            <div><b>Firebase:</b> Auth anónimo habilitado + dominio autorizado + reglas RTDB pegadas.</div>
-            <div class="small">GPS requiere permisos de ubicación.</div>
-          </div>
-        </div>
+      <div class="row" style="margin-top:14px">
+        <a class="btn btnPrimary" href="./panel/index.html" style="text-align:center; width:min(520px,100%)">Abrir Panel</a>
+        <a class="btn btnGhost" href="./fletero/index.html" style="text-align:center; width:min(520px,100%)">Abrir Fletero</a>
       </div>
     </div>
   </div>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(()=>{});
-    }
-  </script>
 </body>
 </html>

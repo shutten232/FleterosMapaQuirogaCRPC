@@ -4,113 +4,69 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#bfe6e2" />
-  <link rel="stylesheet" href="../shared/ui.css?v=20260130a" />
-  <title>Arrived · Fletero</title>
+  <link rel="stylesheet" href="../shared/ui.css?v=local" />
+  <title>Fleteros · Fletero (Local)</title>
+
+  <script src="../shared/utils.global.js?v=local"></script>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="../shared/firebase-config.js?v=20260130a"></script>
-  <script src="../shared/utils.global.js?v=20260130a"></script>
-  <script src="../shared/firebase.global.js?v=20260130a"></script>
-  <link rel="apple-touch-icon" href="../icons/icon-192.png">
-
-  <link rel="apple-touch-icon" href="../icons/icon-192.png">
-  <script>
-    (function(){
-      // Manifest dinámico para GitHub Pages (detecta /REPO/ automáticamente)
-      var parts = location.pathname.split('/').filter(Boolean);
-      var repoRoot = '/';
-      if (location.hostname.endsWith('github.io') && parts.length >= 1) repoRoot = '/' + parts[0] + '/';
-
-      var startUrl = location.origin + repoRoot + "fletero/";
-      var scopeUrl = location.origin + repoRoot;
-
-      var manifest = {
-        name: "Fleteros",
-        short_name: "Arrived",
-        start_url: startUrl,
-        scope: scopeUrl,
-        display: "standalone",
-        orientation: "portrait",
-        background_color: "#bfe6e2",
-        theme_color: "#bfe6e2",
-        icons: [
-          { src: location.origin + repoRoot + "icons/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: location.origin + repoRoot + "icons/icon-512.png", sizes: "512x512", type: "image/png" }
-        ]
-      };
-
-      var href = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(manifest));
-      var link = document.createElement('link');
-      link.rel = 'manifest';
-      link.href = href;
-      document.head.appendChild(link);
-    })();
-  </script>
+  <script src="../shared/firebase-config.js?v=fb1"></script>
+  <script src="../shared/firebase.global.js?v=fb1"></script>
 
 </head>
 <body>
-  <div class="wrap" style="max-width:820px">
+  <div class="wrap" style="max-width:860px">
     <div class="nav">
-      <div class="brand"><div class="t">Arrived</div><div class="s">Fletero</div></div>
+      <div class="brand"><div class="t">Fleteros</div><div class="s">Fletero (Local)</div></div>
       <div class="navActions">
         <a class="pill" href="../panel/index.html"><span class="dot"></span><span>Ir al Panel</span></a>
-        <div class="pill"><span class="dot" id="netDot"></span><span id="netTxt">Red: --</span></div>
+        <div class="pill"><span class="dot" style="background:rgba(23,178,106,.9)"></span><span>Modo: Firebase</span></div>
       </div>
     </div>
 
     <div class="hero">
       <div class="heroTop">
         <div>
-          <div class="hTitle">Reporte de llegada</div>
-          <div class="hSub">Elegí fletero una vez y tocá <b>LLEGUÉ</b> al llegar. Guarda GPS 1 vez.</div>
+          <div class="hTitle">Checklist de ruta</div>
+          <div class="hSub">Marcá el taller cuando llegás. Orden libre. Ubicación simulada para prueba local.</div>
         </div>
       </div>
 
-      <div class="center">
-        <div class="ring">
-          <div class="ringInner">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-              <path d="M12 21s7-4.4 7-11A7 7 0 0 0 5 10c0 6.6 7 11 7 11Z" stroke="rgba(14,26,43,.75)" stroke-width="2" stroke-linejoin="round"/>
-              <path d="M12 11.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="rgba(14,26,43,.55)"/>
-            </svg>
-          </div>
-        </div>
+      <div class="row" style="justify-content:flex-start; margin-top:10px">
+        <button id="btnSetup" class="btn btnGhost btnSmall" type="button">Seleccionar fletero</button>
+        <button id="btnReturning" class="btn btnGhost btnSmall" type="button">Volviendo a Cardenal</button>
+        <span class="badge">Fletero: <b id="who" style="color:var(--ink)">—</b></span>
+        <span class="badge">Estado: <b id="opState" style="color:var(--ink)">—</b></span>
+      </div>
 
-        <div class="h1">
-          LLEGUÉ
-          <small id="who">Fletero: —</small>
-        </div>
-
-        <button class="btn btnPrimary" id="btnLlegue" type="button">LLEGUÉ</button>
-
-        <div class="status" id="status">
-          <div>ℹ️</div>
-          <div>
-            <div><b>Listo.</b> Tocá <b>LLEGUÉ</b> cuando llegues.</div>
-            <div class="small">Si no hay GPS, no se registra (para evitar marcas vacías).</div>
-          </div>
-        </div>
-
-        <div class="row">
-          <span class="badge">Pendientes: <b id="qCount" style="color:var(--ink)">0</b></span>
-          <button id="btnSetup" class="btn btnGhost btnSmall" type="button">Seleccionar fletero</button>
+      <div class="status" id="status" style="margin-top:12px">
+        <div>ℹ️</div>
+        <div>
+          <div><b>Listo.</b> Esperando ruta del Panel.</div>
+          <div class="small">Cada “Llegué” marca un taller y actualiza el mapa.</div>
         </div>
       </div>
     </div>
 
+    <div class="card" id="routeCard">
+      <div class="hTitle" style="font-size:16px">Ruta asignada</div>
+      <div class="small" id="routeMeta">—</div>
+      <div id="routeList" style="display:grid; gap:10px; margin-top:10px"></div>
+    </div>
+
     <div class="card" id="setupCard" style="display:none">
       <div class="hTitle" style="font-size:16px">Seleccionar fletero</div>
-      <div class="small">Se guarda en este teléfono.</div>
+      <div class="small">Se guarda en este navegador.</div>
 
       <label>Fletero</label>
       <select id="fleteroId">
         <option value="">Seleccionar…</option>
-        <option value="joaquin">Joaquin</option>
-        <option value="rodrigo">Rodrigo</option>
-        <option value="jorge">Jorge</option>
-        <option value="agustin">Agustin</option>
+        <option value="Joaquin">Joaquin</option>
+        <option value="Rodrigo">Rodrigo</option>
+        <option value="Jorge">Jorge</option>
+        <option value="Agustin">Agustin</option>
       </select>
 
       <div class="row" style="justify-content:flex-start">
@@ -120,141 +76,174 @@
     </div>
   </div>
 
-  <script>
-    const { uuid, clamp } = window.ArrivedUtils;
-    const { getConfig } = window.ArrivedFirebase;
+<script>
 
-    const FLETEROS = { joaquin:'Joaquin', rodrigo:'Rodrigo', jorge:'Jorge', agustin:'Agustin' };
-    const ALLOWED = new Set(Object.keys(FLETEROS));
+  async function initFirebase(){
+    const r = await window.FirebaseRTDB.init();
+    db = r.db; user = r.user;
+  }
 
-    const LS = { fleteroId:'arrived_fleteroId', deviceId:'arrived_deviceId', queue:'arrived_queue' };
-    const el=(id)=>document.getElementById(id);
-    const netDot=el('netDot'), netTxt=el('netTxt'), who=el('who');
-    const btnLlegue=el('btnLlegue'), status=el('status');
-    const qCount=el('qCount'), setupCard=el('setupCard');
-    const btnSetup=el('btnSetup'), btnSave=el('btnSave'), btnCancel=el('btnCancel');
-    const fleteroSel=el('fleteroId');
 
-    function setStatus(type,title,msg){
-      const icon = type==='ok'?'✅':type==='err'?'⛔':'ℹ️';
-      status.innerHTML = `<div>${icon}</div><div><div><b>${title}</b></div><div class="small" style="color:${type==='err'?'var(--bad)':type==='ok'?'var(--ok)':'var(--muted)'}">${msg}</div></div>`;
+  const { uuid } = window.ArrivedUtils;
+  let db=null, user=null;
+  const ALLOWED = new Set(['Joaquin','Rodrigo','Jorge','Agustin']);
+  const LS = { fleteroId:'fleteros_fleteroId', deviceId:'fleteros_deviceId' };
+  const el=(id)=>document.getElementById(id);
+
+  const who=el('who'), opState=el('opState'), status=el('status');
+  const routeMeta=el('routeMeta'), routeList=el('routeList');
+  const btnSetup=el('btnSetup'), btnReturning=el('btnReturning');
+  const setupCard=el('setupCard'), fleteroSel=el('fleteroId'), btnSave=el('btnSave'), btnCancel=el('btnCancel');
+
+  function setStatus(type,title,msg){
+    const icon = type==='ok'?'✅':type==='err'?'⛔':'ℹ️';
+    status.innerHTML = `<div>${icon}</div><div><div><b>${title}</b></div><div class="small" style="color:${type==='err'?'var(--bad)':type==='ok'?'var(--ok)':'var(--muted)'}">${msg}</div></div>`;
+  }
+  function getDeviceId(){ let id=localStorage.getItem(LS.deviceId); if(!id){id=uuid();localStorage.setItem(LS.deviceId,id);} return id; }
+  function getFleteroId(){ return (localStorage.getItem(LS.fleteroId)||'').trim(); }
+  function setFleteroId(v){ localStorage.setItem(LS.fleteroId, v); paintWho(); }
+  function paintWho(){ who.textContent = getFleteroId() || '—'; }
+
+  function openSetup(){ setupCard.style.display='block'; fleteroSel.value=getFleteroId(); }
+  function closeSetup(){ setupCard.style.display='none'; }
+
+  btnSetup.addEventListener('click', openSetup);
+  btnCancel.addEventListener('click', closeSetup);
+
+  btnSave.addEventListener('click', ()=>{
+    const v=(fleteroSel.value||'').trim();
+    if(!ALLOWED.has(v)){ setStatus('err','Fletero','Seleccioná un fletero válido.'); return; }
+    setFleteroId(v);
+    closeSetup();
+    attach(v);
+    renderRoute();
+    setStatus('ok','Listo','Fletero configurado.');
+  });
+
+  async function ensureGPS(){
+    if(!navigator.geolocation) throw new Error('NO_GEO');
+    return await new Promise((resolve,reject)=>{
+      navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:12000,maximumAge:0});
+    });
+  }
+
+  async function writeLive(fletero, state, extra){
+    const gps = await ensureGPS();
+    await db.ref('live/'+fletero).set({
+      fleteroId: fletero,
+      ts: firebase.database.ServerValue.TIMESTAMP,
+      lat: gps.coords.latitude,
+      lng: gps.coords.longitude,
+      accuracy: gps.coords.accuracy,
+      deviceId: getDeviceId(),
+      state,
+      ...(extra||{})
+    });
+  }
+
+  let routeActive=null;
+
+  function renderRoute(){
+    routeList.innerHTML='';
+    const f=getFleteroId();
+    if(!ALLOWED.has(f)){
+      routeMeta.textContent='Seleccioná fletero.';
+      return;
     }
-    function getDeviceId(){ let id=localStorage.getItem(LS.deviceId); if(!id){id=uuid();localStorage.setItem(LS.deviceId,id);} return id; }
-    function getFleteroId(){ return clamp(localStorage.getItem(LS.fleteroId)||'',60); }
-    function setFleteroId(v){ localStorage.setItem(LS.fleteroId, String(v||'').toLowerCase().trim()); paintWho(); }
-    function paintWho(){ const f=getFleteroId(); who.textContent='Fletero: '+(FLETEROS[f]||'—'); }
-
-    function getQueue(){ try{return JSON.parse(localStorage.getItem(LS.queue)||'[]');}catch{return [];} }
-    function setQueue(q){ localStorage.setItem(LS.queue, JSON.stringify(q)); qCount.textContent=q.length; }
-    function enqueue(item){ const q=getQueue(); q.push(item); setQueue(q); }
-
-    function updateNet(){
-      const online=navigator.onLine;
-      netDot.style.background = online ? 'rgba(23,178,106,.9)' : 'rgba(255,90,90,.9)';
-      netTxt.textContent = online ? 'Red: online' : 'Red: offline';
-      setQueue(getQueue());
+    if(!routeActive || !Array.isArray(routeActive.stops) || !routeActive.stops.length){
+      routeMeta.textContent='Sin ruta asignada.';
+      return;
     }
+    const stops = routeActive.stops.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+    const done = stops.filter(s=>s.done).length;
+    routeMeta.textContent = `Ruta: ${routeActive.routeId||'—'} · Progreso: ${done}/${stops.length}`;
 
-    async function getGPS(){
-      if(!navigator.geolocation) throw new Error('NO_GEO');
-      return await new Promise((resolve,reject)=>{
-        navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:12000,maximumAge:0});
-      });
-    }
+    stops.forEach(s=>{
+      const box=document.createElement('div');
+      box.style.border='1px solid var(--line)';
+      box.style.borderRadius='18px';
+      box.style.padding='12px';
+      box.style.background='rgba(255,255,255,.55)';
 
-    let db=null, user=null;
+      const note = s.note ? `<div class="small" style="margin-top:4px">${s.note}</div>` : '';
+      const badge = s.done ? `<span class="badge">✅ Hecho</span>` : `<span class="badge">⬜ Pendiente</span>`;
+      const btn = s.done
+        ? `<button class="btn btnGhost btnSmall" type="button" data-undo="${s.id}" style="width:auto">Deshacer</button>`
+        : `<button class="btn btnPrimary btnSmall" type="button" data-done="${s.id}" style="width:auto">Llegué</button>`;
 
-    async function initFirebase(){
-      const cfg=getConfig();
-      firebase.initializeApp(cfg);
-      await firebase.auth().signInAnonymously();
-      user=firebase.auth().currentUser;
-      db=firebase.database();
-    }
-
-    async function sendLive(payload){ await db.ref('live').child(payload.fleteroId).set(payload); }
-    async function sendLog(payload){ await db.ref('arrivals').push().set(payload); }
-
-    async function flushQueue(){
-      if(!navigator.onLine || !db) return;
-      const q=getQueue(); if(!q.length) return;
-      const rest=[];
-      for(const item of q){
-        try{ await sendLive(item); await sendLog(item); }catch{ rest.push(item); }
-      }
-      setQueue(rest);
-      if(rest.length===0) setStatus('ok','Sincronizado','Pendientes enviados al panel.');
-    }
-
-    function openSetup(){ setupCard.style.display='block'; fleteroSel.value=getFleteroId(); }
-    function closeSetup(){ setupCard.style.display='none'; }
-
-    btnSetup.addEventListener('click', openSetup);
-    btnCancel.addEventListener('click', closeSetup);
-    btnSave.addEventListener('click', ()=>{
-      const v = String(fleteroSel.value||'').toLowerCase().trim();
-      if(!ALLOWED.has(v)){
-        setStatus('err','Fletero','Seleccioná un fletero válido.');
-        return;
-      }
-      setFleteroId(v);
-      closeSetup();
-      setStatus('ok','Listo','Fletero configurado.');
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+          <div>
+            <div><b>${s.name}</b> ${badge}</div>
+            ${note}
+          </div>
+          <div>${btn}</div>
+        </div>
+      `;
+      routeList.appendChild(box);
     });
 
-    btnLlegue.addEventListener('click', async ()=>{
-      try{
-        const f=getFleteroId();
-        if(!ALLOWED.has(String(f||'').toLowerCase().trim())){ openSetup(); setStatus('err','Fletero','Seleccioná un fletero válido.'); return; }
-
-        btnLlegue.disabled=true;
-        setStatus('info','Enviando','Obteniendo GPS…');
-
-        let gps;
-        try{ gps = await getGPS(); }
-        catch(e){
-          setStatus('err','GPS','No se pudo obtener ubicación. Activá GPS y permisos.');
-          return;
-        }
-
-        const payload = {
-          fleteroId:(FLETEROS[f]||f),
-          deviceId:getDeviceId(),
-          uid:user?.uid||null,
-          ts: firebase.database.ServerValue.TIMESTAMP,
-          lat: gps.coords.latitude,
-          lng: gps.coords.longitude,
-          accuracy: gps.coords.accuracy
-        };
-
-        if(!navigator.onLine){
-          enqueue(payload);
-          setStatus('ok','Guardado','Sin internet. Quedó pendiente y se enviará al volver.');
-        }else{
-          try{ await sendLive(payload); await sendLog(payload); setStatus('ok','OK','Marcado en el mapa del panel.'); }
-          catch{ enqueue(payload); setStatus('err','Error','No se pudo enviar. Quedó pendiente.'); }
-        }
-        await flushQueue();
-      } finally {
-        btnLlegue.disabled=false;
-      }
+    routeList.querySelectorAll('[data-done]').forEach(b=>{
+      b.addEventListener('click', ()=> markStop(b.getAttribute('data-done'), true));
     });
+    routeList.querySelectorAll('[data-undo]').forEach(b=>{
+      b.addEventListener('click', ()=> markStop(b.getAttribute('data-undo'), false));
+    });
+  }
 
-    window.addEventListener('online', ()=>{ updateNet(); flushQueue(); });
-    window.addEventListener('offline', updateNet);
+  async function markStop(stopId, done){
+    const f=getFleteroId();
+    if(!ALLOWED.has(f)){ openSetup(); return; }
+    if(!routeActive || !Array.isArray(routeActive.stops)) { setStatus('err','Ruta','No hay ruta asignada.'); return; }
 
-    (async ()=>{
-      updateNet(); paintWho(); setQueue(getQueue());
-      try{ await initFirebase(); setStatus('ok','Conectado','Listo para registrar llegadas.'); await flushQueue(); }
-      catch(e){ setStatus('err','Firebase','Revisá Auth anónimo + dominio autorizado + firebase-config.js.'); }
-      if(!ALLOWED.has(String(getFleteroId()||'').toLowerCase().trim())) openSetup();
-    })();
-  </script>
+    const stops = routeActive.stops.slice();
+    const idx = stops.findIndex(x=>x.id===stopId);
+    if(idx<0){ setStatus('err','Ruta','Taller inválido.'); return; }
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('../sw.js').catch(()=>{});
+    if(done){
+      stops[idx] = { ...stops[idx], done:true, doneAt: firebase.database.ServerValue.TIMESTAMP };
+      await db.ref('routesActive/'+f).set({ ...routeActive, stops });
+      await db.ref('status/'+f).set({ state:'EN_RUTA', routeId: routeActive.routeId, lastStop: stops[idx].name, ts: firebase.database.ServerValue.TIMESTAMP });
+      opState.textContent='EN_RUTA';
+      await writeLive(f, 'EN_RUTA', { lastStop: stops[idx].name });
+      setStatus('ok','OK','Marcado: '+stops[idx].name);
+    } else {
+      stops[idx] = { ...stops[idx], done:false };
+      delete stops[idx].doneAt;
+      await db.ref('routesActive/'+f).set({ ...routeActive, stops });
+      setStatus('ok','OK','Desmarcado: '+stops[idx].name);
     }
-  </script>
+
+    routeActive = { ...routeActive, stops };
+    renderRoute();
+  }
+
+  async function setReturning(){
+    const f=getFleteroId();
+    if(!ALLOWED.has(f)){ openSetup(); return; }
+    await db.ref('status/'+f).set({ state:'REGRESANDO', routeId: routeActive?.routeId||null, ts: firebase.database.ServerValue.TIMESTAMP });
+    opState.textContent='REGRESANDO';
+    await writeLive(f, 'REGRESANDO', { lastStop:'CARDENAL' });
+    setStatus('ok','OK','Marcado como regresando.');
+  }
+  btnReturning.addEventListener('click', setReturning);
+
+  function attach(f){
+    db.ref('routesActive/'+f).on('value', (snap)=>{ routeActive = snap.val(); renderRoute(); });
+    db.ref('status/'+f).on('value', (snap)=>{ const v=snap.val()||{}; opState.textContent = v.state || '—'; });
+  }
+
+  (async function init(){
+    try{ await initFirebase(); }catch(e){ console.error(e); setStatus('err','Firebase','No conecta'); }
+
+    paintWho();
+    const f=getFleteroId();
+    if(!ALLOWED.has(f)) openSetup();
+    else attach(f);
+
+    setStatus('info','Listo','Esperando ruta asignada desde Panel.');
+  })();
+
+</script>
 </body>
 </html>
