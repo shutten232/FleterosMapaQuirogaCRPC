@@ -68,6 +68,7 @@
           <option value="Rodrigo">Rodrigo</option>
           <option value="Jorge">Jorge</option>
           <option value="Agustin">Agustin</option>
+          <option value="Alejandro">Alejandro</option>
         </select>
 
         <label style="margin:10px 0 6px">Lista de talleres</label>
@@ -105,7 +106,7 @@
 
   const { fmt, mapLink, clamp } = window.ArrivedUtils;
   let db=null, user=null;
-  const FLETEROS = ['Joaquin','Rodrigo','Jorge','Agustin'];
+  const FLETEROS = ['Joaquin','Rodrigo','Jorge','Agustin','Alejandro'];
   const el=(id)=>document.getElementById(id);
 
   const q=el('q'), btnClear=el('btnClear'), hint=el('hint'), tbody=el('tbody');
@@ -174,20 +175,37 @@
 
   function normName(s){ return String(s||'').trim().toLowerCase(); }
 
+  function normalizeStops(stops){
+    const out=[];
+    const seen=new Set();
+    (stops||[]).forEach((s)=>{
+      const nm=(s && s.name)? String(s.name).trim() : '';
+      if(!nm) return;
+      const id='t_' + normName(nm).replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
+      if(seen.has(id)) return;
+      seen.add(id);
+      out.push({ ...s, id, name:nm });
+    });
+    return out.map((s,i)=>({ ...s, order:i+1 }));
+  }
+
   function parseStops(text){
     const lines = String(text||'').split('\n').map(l=>l.trim()).filter(Boolean);
     return lines.map((line, idx)=>{
       const parts = line.split('|').map(x=>x.trim());
-      return { id:'s'+(idx+1), order:idx+1, name:parts[0]||'', note:parts[1]||'', done:false };
+      const nm = parts[0]||'';
+      const id = 't_' + normName(nm).replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40);
+      return { id, order:idx+1, name:nm, note:parts[1]||'', done:false };
     }).filter(s=>s.name);
   }
   function setRb(s){ rbStatus.textContent=s; }
 
   async function publishRoute(fleteroName, stops){
     const routeId = 'r_' + Date.now() + '_' + fleteroName.toLowerCase();
+    const normStops = normalizeStops(stops);
     await db.ref('routesActive/'+fleteroName).set({
       routeId, fleteroId: fleteroName, createdAt: firebase.database.ServerValue.TIMESTAMP,
-      stops
+      stops: normStops
     });
     await db.ref('status/'+fleteroName).set({ state:'EN_RUTA', routeId, ts: firebase.database.ServerValue.TIMESTAMP });
     return routeId;
@@ -205,7 +223,7 @@
       .filter(s=> !seen.has(normName(s.name)))
       .map(s=>({ ...s, done:false }));
 
-    const merged = existing.concat(toAdd).map((s,i)=>({ ...s, order:i+1 }));
+    const merged = normalizeStops(existing.concat(toAdd));
     const routeId = (cur && cur.routeId) ? cur.routeId : ('r_' + Date.now() + '_' + fleteroName.toLowerCase());
 
     await db.ref('routesActive/'+fleteroName).set({
@@ -216,7 +234,7 @@
     });
 
     await db.ref('status/'+fleteroName).set({ state:'EN_RUTA', routeId, ts: firebase.database.ServerValue.TIMESTAMP });
-    return { routeId, added: toAdd.length, total: merged.length };
+    return { routeId, added: Math.max(0, merged.length - existing.length), total: merged.length };
   }
 
   async function clearRoute(fleteroName){
