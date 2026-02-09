@@ -7,7 +7,7 @@ window.FirebaseRTDB = (function(){
     const cfg = window.FIREBASE_CONFIG;
     app = firebase.initializeApp(cfg);
     auth = firebase.auth();
-    db = firebase.database(window.FIREBASE_DB_URL);
+    db = firebase.database();
     user = await auth.signInAnonymously().then(r=>r.user);
     inited=true;
     return { app, auth, db, user };

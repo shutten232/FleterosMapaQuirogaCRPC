@@ -5,6 +5,6 @@ window.FIREBASE_CONFIG = {
   projectId: "testeoappflete",
   storageBucket: "testeoappflete.firebasestorage.app",
   messagingSenderId: "100452994973",
-  appId: "1:100452994973:web:71b2baa00ead371fcd6974"
+  appId: "1:100452994973:web:71b2baa00ead371fcd6974",
+  databaseURL: "https://testeoappflete-default-rtdb.firebaseio.com/"
 };
-window.FIREBASE_DB_URL = "https://testeoappflete-default-rtdb.firebaseio.com/";
