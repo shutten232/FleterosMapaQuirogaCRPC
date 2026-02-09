@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="../shared/ui.css?v=fb2" />
   <title>Fleteros · Panel </title>
+  <link rel="manifest" href="../manifest.webmanifest?v=pwa3">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -21,12 +22,16 @@
   <script src="../shared/firebase-config.js?v=fb22"></script>
   <script src="../shared/firebase.global.js?v=fb22"></script>
 
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="../assets/icon-192.png" />
 </head>
 <body>
   <div class="wrap">
     <div class="nav">
       <div class="brand"><div class="t">Fleteros</div><div class="s">Panel </div></div>
       <div class="navActions">
+        <button class="pill" id="btnInstall" type="button" style="cursor:pointer;border:0">Instalar</button>
         <a class="pill" href="../fletero/index.html"><span class="dot"></span><span>Ir a Fletero</span></a>
         <div class="pill"><span class="dot" style="background:rgba(23,178,106,.9)"></span><span>Modo: Firebase</span></div>
       </div>
@@ -359,5 +364,17 @@
 
 })();
 </script>
+
+<script>
+(function(){
+  let dp=null;
+  const b=document.getElementById('btnInstall');
+  if(b) b.style.display='none';
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;if(b) b.style.display='inline-flex';});
+  if(b) b.addEventListener('click',async()=>{if(dp){dp.prompt();try{await dp.userChoice;}catch{}dp=null;b.style.display='none';}else{alert('Usá el menú del navegador: “Agregar a pantalla principal”.');}});
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js').catch(()=>{});
+})();
+</script>
+
 </body>
 </html>
