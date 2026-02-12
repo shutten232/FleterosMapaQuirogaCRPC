@@ -52,6 +52,7 @@
         </div>
         <div style="flex:0 0 auto; margin-top:26px">
           <button class="btn btnGhost" id="btnClear" style="width:auto" type="button">Limpiar</button>
+          <button class="btn btnGhost" id="btnResetDay" style="width:auto;margin-left:8px" type="button">Reiniciar día</button>
         </div>
       </div>
     </div>
@@ -114,7 +115,7 @@
   const FLETEROS = ['Joaquin','Rodrigo','Jorge','Agustin','Alejandro'];
   const el=(id)=>document.getElementById(id);
 
-  const q=el('q'), btnClear=el('btnClear'), hint=el('hint'), tbody=el('tbody');
+  const q=el('q'), btnClear=el('btnClear'), btnResetDay=el('btnResetDay'), hint=el('hint'), tbody=el('tbody');
   const rbFletero=el('rbFletero'), rbStops=el('rbStops'), rbPublish=el('rbPublish'), rbAppend=el('rbAppend'), rbClearRoute=el('rbClearRoute'), rbStatus=el('rbStatus');
   const routesCards=el('routesCards');
 
@@ -337,6 +338,28 @@
   btnClear.addEventListener('click', ()=>{ q.value=''; applyFilter(); });
   q.addEventListener('input', applyFilter);
 
+  // Reinicia el día: limpia TODAS las marcas del mapa (nodo /live)
+  btnResetDay.addEventListener('click', async ()=>{
+    if(!confirm('Reiniciar día: se limpian TODAS las marcas del mapa (nodo live) para todos. ¿Continuar?')) return;
+    try{
+      // 1) limpiar en Firebase (esto dispara el listener y vacía el mapa en todos los paneles)
+      await db.ref('live').remove();
+
+      // 2) limpieza local inmediata (por si hay cache del listener)
+      for(const [id,m] of markers.entries()){
+        if(map.hasLayer(m)) map.removeLayer(m);
+      }
+      markers.clear();
+      rowsAll = [];
+      renderTable([]);
+      hint.textContent = 'Mapa reiniciado. Esperando reportes nuevos.';
+      q.value='';
+    }catch(e){
+      console.error(e);
+      alert('Error al reiniciar el día. Revisá conexión Firebase.');
+    }
+  });
+
   await initFirebase();
 
   db.ref('live').on('value', (snap)=>{
@@ -344,6 +367,16 @@
     const arr = Object.values(val);
     arr.sort((a,b)=>(b.ts||0)-(a.ts||0));
     rowsAll = arr;
+
+    // Reconciliación: si desaparece del nodo /live, se borra el marker (ej: Reiniciar día)
+    const present = new Set(arr.map(r=>r && r.fleteroId).filter(Boolean));
+    for(const [id,m] of markers.entries()){
+      if(!present.has(id)){
+        if(map.hasLayer(m)) map.removeLayer(m);
+        markers.delete(id);
+      }
+    }
+
     arr.forEach(upsertMarker);
     applyFilter();
   });
